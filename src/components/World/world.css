@@ -1,6 +1,6 @@
 .world {
 	position: relative;
-	width: 288px;
+	width: var(--world-width, 288px);
 	height: 400px;
 	margin: auto;
     background-color: black;
