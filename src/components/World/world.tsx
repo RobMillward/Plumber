@@ -5,15 +5,19 @@ import Girder from "./Girder/girder";
 import Mario from "../Mario/mario";
 import { LEVEL_1_GIRDER_POSITIONS } from "~/consts/levels";
 import { useMarioPhysics } from "./useMarioPhysics";
+import { WORLD_HEIGHT, WORLD_WIDTH } from "~/consts/dimensions";
 
-const WORLD_WIDTH = 288;
 
-// Widely supported (unlike attr() for sizing properties): CSS reads this
-// from the custom property set below rather than a hardcoded value.
-const worldStyle = { "--world-width": `${WORLD_WIDTH}px` } as CSSProperties;
+
+// Widely supported (unlike attr() for sizing properties): CSS reads these
+// from the custom properties set below rather than hardcoded values.
+const worldStyle = {
+	"--world-width": `${WORLD_WIDTH}px`,
+	"--world-height": `${WORLD_HEIGHT}px`,
+} as CSSProperties;
 
 export default function World() {
-	const mario = useMarioPhysics(0, 300, LEVEL_1_GIRDER_POSITIONS, WORLD_WIDTH);
+	const mario = useMarioPhysics(0, 300, LEVEL_1_GIRDER_POSITIONS, WORLD_WIDTH, WORLD_HEIGHT);
 
 	return (
 		<main className="world" style={worldStyle}>

@@ -1,7 +1,7 @@
 .world {
 	position: relative;
 	width: var(--world-width, 288px);
-	height: 400px;
+	height: var(--world-height, 400px);
 	margin: auto;
     background-color: black;
 }
