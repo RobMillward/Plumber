@@ -20,7 +20,12 @@ export default function World() {
 			{LEVEL_1_GIRDER_POSITIONS.map(({ left, top }, index) => (
 				<Girder key={`girder_${index}`} style={{ left, top }} />
 			))}
-			<Mario key="mario" facing={mario.facing} style={{ left: mario.left, top: mario.top }} />
+			<Mario
+				key="mario"
+				facing={mario.facing}
+				sprite={mario.sprite}
+				style={{ left: mario.left, top: mario.top }}
+			/>
 		</main>
 	);
 }

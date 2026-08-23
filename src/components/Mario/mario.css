@@ -10,3 +10,11 @@
 .mario--facing-right {
     transform: scaleX(-1);
 }
+
+.mario--sprite-1 {
+    background-image: url('/src/assets/mario_32_1.png');
+}
+
+.mario--sprite-2 {
+    background-image: url('/src/assets/mario_32_2.png');
+}

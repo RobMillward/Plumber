@@ -9,9 +9,11 @@ const FALL_STEP = 2;
 const MOVE_STEP = 2;
 const TICK_MS = 50;
 const STEP_TOLERANCE = 4;
+const WALK_FRAME_TICKS = 4;
 
 type Facing = "left" | "right";
-type MarioPosition = { left: number; top: number; facing: Facing };
+type WalkSprite = 0 | 1 | 2;
+type MarioPosition = { left: number; top: number; facing: Facing; sprite: WalkSprite; walkTick: number };
 
 function isTouchingGirder(left: number, top: number, girders: GirderPosition[]): boolean {
 	const feet = top + MARIO_HEIGHT;
@@ -35,9 +37,6 @@ function findNearestGirder(girders: GirderPosition[], feet: number): GirderPosit
 	);
 }
 
-// One fixed-size physics step (the same movement/gravity math regardless
-// of how often it's called), so replaying it a variable number of times
-// per animation frame still moves Mario at a constant speed.
 function stepPosition(
 	current: MarioPosition,
 	pressedKeys: { left: boolean; right: boolean },
@@ -73,9 +72,16 @@ function stepPosition(
 
 	top = isTouchingGirder(left, top, girders) ? top : top + FALL_STEP;
 
-	return left === current.left && top === current.top && facing === current.facing
+	const walkTick = direction !== 0 ? current.walkTick + 1 : 0;
+	const sprite: WalkSprite = direction === 0 ? 0 : Math.floor(walkTick / WALK_FRAME_TICKS) % 2 === 0 ? 1 : 2;
+
+	return left === current.left &&
+		top === current.top &&
+		facing === current.facing &&
+		sprite === current.sprite &&
+		walkTick === current.walkTick
 		? current
-		: { left, top, facing };
+		: { left, top, facing, sprite, walkTick };
 }
 
 export function useMarioPhysics(
@@ -84,7 +90,13 @@ export function useMarioPhysics(
 	girders: GirderPosition[],
 	worldWidth: number,
 ): MarioPosition {
-	const [position, setPosition] = useState<MarioPosition>({ left: startLeft, top: startTop, facing: "left" });
+	const [position, setPosition] = useState<MarioPosition>({
+		left: startLeft,
+		top: startTop,
+		facing: "left",
+		sprite: 0,
+		walkTick: 0,
+	});
 	const pressedKeys = useRef({ left: false, right: false });
 
 	useEffect(() => {
@@ -114,9 +126,6 @@ export function useMarioPhysics(
 
 		function frame(now: number) {
 			if (lastTime !== null) {
-				// Cap how much time we'll try to catch up on (e.g. after the
-				// tab was backgrounded) so Mario doesn't leap forward/fall
-				// through the floor in one big jump once it's visible again.
 				const delta = Math.min(now - lastTime, TICK_MS * 5);
 				accumulatedMs += delta;
 			}
