@@ -1,0 +1,79 @@
+{
+  "name": "plumber",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@babel/plugin-transform-explicit-resource-management": "^7.28.0",
+    "@babel/plugin-transform-react-jsx": "^7.27.1",
+    "@babel/preset-env": "^7.28.5",
+    "@babel/preset-typescript": "^7.28.5",
+    "@emotion/css": "^11.13.5",
+    "@emotion/react": "^11.14.0",
+    "@eslint/compat": "^2.0.0",
+    "@eslint/eslintrc": "^3.3.1",
+    "@reduxjs/toolkit": "^2.10.1",
+    "@typescript-eslint/eslint-plugin": "^8.47.0",
+    "@typescript-eslint/parser": "^8.47.0",
+    "@vitejs/plugin-react-swc": "^4.2.2",
+    "baseline-browser-mapping": "^2.11.18",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-jest": "^29.2.1",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-no-only-tests": "^3.3.0",
+    "eslint-plugin-react-dom": "^2.3.5",
+    "eslint-plugin-react-x": "^2.3.5",
+    "eslint-plugin-testing-library": "^7.13.5",
+    "husky": "^9.1.7",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-redux": "^9.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@lavamoat/allow-scripts": "^5.1.0",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.1.1",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "prettier": "^3.6.2",
+    "ts-jest": "^29.4.5",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.47.0",
+    "vite": "^7.2.2",
+    "vite-plugin-babel": "^1.3.2",
+    "vite-tsconfig-paths": "^5.1.4"
+  },
+  "lavamoat": {
+    "allowScripts": {
+      "@vitejs/plugin-react-swc>@swc/core#1.15.2": true,
+      "jest>@jest/core>jest-resolve>unrs-resolver#1.11.1": true,
+      "vite>esbuild#0.25.12": true
+    }
+  },
+  "allowScripts": {
+    "@swc/core@1.15.2": true,
+    "esbuild@0.25.12": true,
+    "unrs-resolver@1.11.1": true
+  }
+}

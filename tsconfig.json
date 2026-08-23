@@ -1,0 +1,32 @@
+{
+  "include": [
+    "**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ],
+  "compilerOptions": {
+    "lib": ["DOM","DOM.iterable","ES2022"],
+    "types": ["node", "jest", "vite/client"],
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx":"react-jsx",
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "~/*": ["./src/*"]
+    },
+    "jsxImportSource": "@emotion/react",
+    "esModuleInterop": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "isolatedModules": true,
+  },
+}
