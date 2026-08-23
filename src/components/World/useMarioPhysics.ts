@@ -35,6 +35,49 @@ function findNearestGirder(girders: GirderPosition[], feet: number): GirderPosit
 	);
 }
 
+// One fixed-size physics step (the same movement/gravity math regardless
+// of how often it's called), so replaying it a variable number of times
+// per animation frame still moves Mario at a constant speed.
+function stepPosition(
+	current: MarioPosition,
+	pressedKeys: { left: boolean; right: boolean },
+	girders: GirderPosition[],
+	worldWidth: number,
+): MarioPosition {
+	const direction = pressedKeys.left ? -1 : pressedKeys.right ? 1 : 0;
+	let left = current.left;
+	let top = current.top;
+	const facing: Facing = direction === 1 ? "right" : direction === -1 ? "left" : current.facing;
+
+	if (direction !== 0) {
+		const candidateLeft = Math.min(Math.max(0, current.left + direction * MOVE_STEP), worldWidth - MARIO_WIDTH);
+		const girdersUnderCandidate = findGirdersUnder(candidateLeft, girders);
+
+		if (girdersUnderCandidate.length === 0) {
+			left = candidateLeft;
+		} else {
+			const feet = current.top + MARIO_HEIGHT;
+			const nearestGirder = findNearestGirder(girdersUnderCandidate, feet);
+			const heightDiff = nearestGirder.top - feet;
+
+			if (heightDiff < -STEP_TOLERANCE) {
+				// Blocked — more than STEP_TOLERANCE higher than the current ground.
+			} else if (heightDiff > STEP_TOLERANCE) {
+				left = candidateLeft;
+			} else {
+				left = candidateLeft;
+				top = nearestGirder.top - MARIO_HEIGHT;
+			}
+		}
+	}
+
+	top = isTouchingGirder(left, top, girders) ? top : top + FALL_STEP;
+
+	return left === current.left && top === current.top && facing === current.facing
+		? current
+		: { left, top, facing };
+}
+
 export function useMarioPhysics(
 	startLeft: number,
 	startTop: number,
@@ -65,46 +108,40 @@ export function useMarioPhysics(
 	}, []);
 
 	useEffect(() => {
-		const interval = setInterval(() => {
-			setPosition((current) => {
-				const direction = pressedKeys.current.left ? -1 : pressedKeys.current.right ? 1 : 0;
-				let left = current.left;
-				let top = current.top;
-				const facing: Facing = direction === 1 ? "right" : direction === -1 ? "left" : current.facing;
+		let animationFrameId: number;
+		let lastTime: number | null = null;
+		let accumulatedMs = 0;
 
-				if (direction !== 0) {
-					const candidateLeft = Math.min(
-						Math.max(0, current.left + direction * MOVE_STEP),
-						worldWidth - MARIO_WIDTH,
-					);
-					const girdersUnderCandidate = findGirdersUnder(candidateLeft, girders);
+		function frame(now: number) {
+			if (lastTime !== null) {
+				// Cap how much time we'll try to catch up on (e.g. after the
+				// tab was backgrounded) so Mario doesn't leap forward/fall
+				// through the floor in one big jump once it's visible again.
+				const delta = Math.min(now - lastTime, TICK_MS * 5);
+				accumulatedMs += delta;
+			}
+			lastTime = now;
 
-					if (girdersUnderCandidate.length === 0) {
-						left = candidateLeft;
-					} else {
-						const feet = current.top + MARIO_HEIGHT;
-						const nearestGirder = findNearestGirder(girdersUnderCandidate, feet);
-						const heightDiff = nearestGirder.top - feet;
+			const tickCount = Math.floor(accumulatedMs / TICK_MS);
 
-						if (heightDiff < -STEP_TOLERANCE) {
-						} else if (heightDiff > STEP_TOLERANCE) {
-							left = candidateLeft;
-						} else {
-							left = candidateLeft;
-							top = nearestGirder.top - MARIO_HEIGHT;
-						}
+			if (tickCount > 0) {
+				accumulatedMs -= tickCount * TICK_MS;
+
+				setPosition((current) => {
+					let next = current;
+					for (let i = 0; i < tickCount; i++) {
+						next = stepPosition(next, pressedKeys.current, girders, worldWidth);
 					}
-				}
+					return next;
+				});
+			}
 
-				top = isTouchingGirder(left, top, girders) ? top : top + FALL_STEP;
+			animationFrameId = requestAnimationFrame(frame);
+		}
 
-				return left === current.left && top === current.top && facing === current.facing
-					? current
-					: { left, top, facing };
-			});
-		}, TICK_MS);
+		animationFrameId = requestAnimationFrame(frame);
 
-		return () => clearInterval(interval);
+		return () => cancelAnimationFrame(animationFrameId);
 	}, [girders, worldWidth]);
 
 	return position;
