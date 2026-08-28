@@ -19,7 +19,7 @@ const TICK_MS = 50;
 const STEP_TOLERANCE = 4;
 const WALK_FRAME_TICKS = 4;
 const HAMMER_SWAP_MS = 250;
-const JUMP_STEP = [10, 8, 6, 4, 2, 0, -2, -4, -6, -8, -10];
+const JUMP_STEP = [10, 7, 4, 2, 1, 0, -1, -2, -4, -7, -10];
 const JUMP_TICKS = JUMP_STEP.length;
 
 const HELD_KEY_MAP: Record<string, keyof PressedKeys> = {
