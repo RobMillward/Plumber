@@ -2,10 +2,12 @@ import "./mario.css";
 
 import type { CSSProperties, HTMLAttributes } from "react";
 import { MARIO_HEIGHT, MARIO_WIDTH } from "~/consts/dimensions";
+import type { Facing, HammerState, WalkSprite } from "./useMarioPhysics.types";
 
 export type MarioProps = HTMLAttributes<HTMLDivElement> & {
-    facing?: "left" | "right";
-    sprite?: 0 | 1 | 2;
+    facing: Facing;
+    sprite: WalkSprite;
+    hammerState: HammerState;
 };
 
 const marioSizeStyle = {
@@ -13,22 +15,32 @@ const marioSizeStyle = {
     "--mario-height": `${MARIO_HEIGHT}px`,
 } as CSSProperties;
 
-export default function Mario({ className, facing = "left", sprite = 0, style, ...props }: MarioProps) {
-    const classNames = [
-        "mario",
+export default function Mario({ className, facing, sprite, hammerState, style, ...props }: MarioProps) {
+    const classNamesWrapper = [
+        "mario-wrapper",
         facing === "right" && "mario--facing-right",
-        sprite !== 0 && `mario--sprite-${sprite}`,
-        className,
     ]
         .filter(Boolean)
         .join(" ");
 
+    const classNamesSprite = [
+        "mario-sprite",
+        facing === "right" && "mario--facing-right",
+        hammerState === "none" ? `mario--sprite-${sprite}` : `mario--sprite-${sprite}-hammer-${hammerState}`,
+        className,
+    ]
+        .filter(Boolean)
+        .join(" ");
     return (
         <div
             {...props}
-            className={classNames}
             style={{ ...marioSizeStyle, ...style }}
+            className={classNamesWrapper}
             data-element="mario"
-        />
+        >
+            <div
+                className={classNamesSprite}
+             />
+        </div>
     );
 }

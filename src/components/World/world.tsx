@@ -4,13 +4,9 @@ import type { CSSProperties } from "react";
 import Girder from "./Girder/girder";
 import Mario from "../Mario/mario";
 import { LEVEL_1_GIRDER_POSITIONS } from "~/consts/levels";
-import { useMarioPhysics } from "./useMarioPhysics";
+import { useMarioPhysics } from "../Mario/useMarioPhysics";
 import { WORLD_HEIGHT, WORLD_WIDTH } from "~/consts/dimensions";
 
-
-
-// Widely supported (unlike attr() for sizing properties): CSS reads these
-// from the custom properties set below rather than hardcoded values.
 const worldStyle = {
 	"--world-width": `${WORLD_WIDTH}px`,
 	"--world-height": `${WORLD_HEIGHT}px`,
@@ -29,6 +25,7 @@ export default function World() {
 				facing={mario.facing}
 				sprite={mario.sprite}
 				style={{ left: mario.left, top: mario.top }}
+				hammerState={mario.hammerState}
 			/>
 		</main>
 	);

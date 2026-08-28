@@ -1,20 +1,56 @@
-.mario {
+.mario-wrapper {
     position: absolute;
     width: var(--mario-width, 32px);
     height: var(--mario-height, 32px);
-    background-image: url('/src/assets/mario_32_0.png');
-    background-size: cover;
+}
+
+.mario-sprite {
+    background-position: 100% 100%;
+    background-size: initial;
     background-repeat: no-repeat;
+    position: absolute;
+    left: auto;
+    right: 0;
+    bottom: 0;
+    height: 64px;
+    width: 64px;
 }
 
 .mario--facing-right {
+    left: 0;
+    right: auto;
+}
+
+.mario--facing-right .mario-sprite {
     transform: scaleX(-1);
 }
 
+.mario--sprite-0 {
+    background-image: url('/src/assets/mario/mario_32_0.png');
+}
+.mario--sprite-0-hammer-up {
+    background-image: url('/src/assets/mario/mario_32_0_hammer_up.png');
+}
+.mario--sprite-0-hammer-down {
+    background-image: url('/src/assets/mario/mario_32_0_hammer_down.png');
+}
+
 .mario--sprite-1 {
-    background-image: url('/src/assets/mario_32_1.png');
+    background-image: url('/src/assets/mario/mario_32_1.png');
+}
+.mario--sprite-1-hammer-up {
+    background-image: url('/src/assets/mario/mario_32_1_hammer_up.png');
+}
+.mario--sprite-1-hammer-down {
+    background-image: url('/src/assets/mario/mario_32_1_hammer_down.png');
 }
 
 .mario--sprite-2 {
-    background-image: url('/src/assets/mario_32_2.png');
+    background-image: url('/src/assets/mario/mario_32_2.png');
+}
+.mario--sprite-2-hammer-up {
+    background-image: url('/src/assets/mario/mario_32_2_hammer_up.png');
+}
+.mario--sprite-2-hammer-down {
+    background-image: url('/src/assets/mario/mario_32_2_hammer_down.png');
 }
