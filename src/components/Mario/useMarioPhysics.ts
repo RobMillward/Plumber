@@ -25,12 +25,7 @@ import type {
 
 const MOVE_STEP = 2;
 const CLIMB_STEP = 2;
-// How close a girder needs to be to a ladder's own top/bottom edge to
-// count as "this ladder connects here" (see resolveClimbing) — deliberately
-// tight, since this level stacks multiple girder rows well beyond any
-// single ladder's own span, and a looser distance would treat an unrelated
-// row further along the same column as catching a genuinely dead-end
-// ladder too.
+// How near a girder must be to a ladder's edge to count as connecting to it (see resolveClimbing).
 const LADDER_GIRDER_CONNECTION_TOLERANCE = 16;
 const TICK_MS = 50;
 const STEP_TOLERANCE = 4;
@@ -121,6 +116,28 @@ function createInitialPosition(left: number, top: number): MarioPosition {
 	};
 }
 
+// Whether a girder near a ladder's edge (ahead of Mario's current position, not already passed) still connects here.
+function hasReachableGirderNear(
+	ladderEdge: number,
+	currentBottom: number,
+	verticalDirection: Direction,
+	left: number,
+	girders: GirderPosition[],
+): boolean {
+	return findGirdersUnder(left, girders).some((girder) => {
+		const notYetPassed = verticalDirection === -1 ? girder.top <= currentBottom : girder.top >= currentBottom;
+		const distance = verticalDirection === -1 ? ladderEdge - girder.top : girder.top - ladderEdge;
+		return notYetPassed && distance >= 0 && distance <= LADDER_GIRDER_CONNECTION_TOLERANCE;
+	});
+}
+
+// Clamps bottom to a ladder's own top/bottom rung, for a dead-end climb with nothing beyond it.
+function clampToLadderEdge(bottom: number, verticalDirection: Direction, ladder: LadderPosition): number {
+	if (verticalDirection === -1) return Math.max(bottom, ladder.top);
+	return Math.min(bottom, ladder.top + ladder.height);
+}
+
+// Resolves ladder climbing for one tick, or returns null when Mario isn't climbing.
 function resolveClimbing(
 	current: MarioPosition,
 	verticalDirection: Direction,
@@ -142,14 +159,7 @@ function resolveClimbing(
 
 	const rawNextBottom = currentBottom + verticalDirection * CLIMB_STEP;
 
-	// A girder crossed during this exact step always wins, regardless of
-	// anything below — land on it precisely and stop climbing right there.
-	// Checking this first (rather than applying the raw step and letting
-	// next tick's isTouchingGirder catch up) avoids a step overshooting a
-	// girder's surface in one hop; findGirderCrossing deliberately excludes
-	// the girder Mario is already resting on (see its own comment), so
-	// starting a climb away from wherever he currently stands is never
-	// mistaken for re-crossing that same surface.
+	// A girder crossed this exact step always wins — land on it precisely and stop climbing right there.
 	const crossedGirder = findGirderCrossing(current.left, currentBottom, rawNextBottom, girders);
 
 	if (crossedGirder) {
@@ -157,44 +167,15 @@ function resolveClimbing(
 		return { top, canUseLadder: isWithinLadderBounds(current.left, top, ladders), isClimbing: false };
 	}
 
-	// No girder reached yet this step. Some ladders end deliberately
-	// without ever reaching one (a dead-end climb) — clamp to the ladder's
-	// own top/bottom rung so he doesn't drift into open space, same as
-	// before. But when a girder exists a little further along (the normal
-	// case — a ladder built to connect two platforms, occasionally a few
-	// px past where this single step lands), don't clamp: keep applying
-	// the climb step past the ladder's nominal end exactly as if still
-	// climbing, so a later tick's crossing check above eventually catches
-	// it.
-	let bottom = rawNextBottom;
+	// No girder reached yet — clamp to the ladder's own edge unless one is still reachable a bit further along.
 	const currentLadder = findLadderAt(current.left, current.top, ladders);
+	let bottom = rawNextBottom;
 
 	if (currentLadder) {
 		const ladderEdge = verticalDirection === -1 ? currentLadder.top : currentLadder.top + currentLadder.height;
-		// Must be on the far side of the edge in the direction of travel
-		// (above it when ascending, below it when descending) — not just
-		// within the tolerance distance in either direction. Without this,
-		// a girder anchoring the OTHER end of a short ladder can end up
-		// coincidentally within tolerance of this edge too, and get
-		// mistaken for one that catches this end.
-		const hasCatchingGirder = findGirdersUnder(current.left, girders).some((girder) => {
-			// Must still be ahead of (or exactly at) Mario's CURRENT position,
-			// not just near the ladder's fixed edge coordinate — otherwise,
-			// once he's already slipped a step or two past this exact girder
-			// (which findGirderCrossing's exact-start exclusion allows, by
-			// design, so a fresh climb can leave the surface it started on),
-			// every later tick would keep seeing the same now-passed girder
-			// as still "catching" and keep skipping the clamp forever,
-			// letting him drift straight through it with nothing to stop him.
-			const notYetPassed = verticalDirection === -1 ? girder.top <= currentBottom : girder.top >= currentBottom;
-			const distance = verticalDirection === -1 ? ladderEdge - girder.top : girder.top - ladderEdge;
-			return notYetPassed && distance >= 0 && distance <= LADDER_GIRDER_CONNECTION_TOLERANCE;
-		});
+		const hasCatchingGirder = hasReachableGirderNear(ladderEdge, currentBottom, verticalDirection, current.left, girders);
 
-		if (!hasCatchingGirder) {
-			if (verticalDirection === -1) bottom = Math.max(bottom, currentLadder.top);
-			if (verticalDirection === 1) bottom = Math.min(bottom, currentLadder.top + currentLadder.height);
-		}
+		if (!hasCatchingGirder) bottom = clampToLadderEdge(bottom, verticalDirection, currentLadder);
 	}
 
 	const top = bottom - MARIO_HEIGHT;
@@ -212,37 +193,37 @@ function resolveWalkAnimation(direction: Direction, previousWalkTick: number): {
 	return { walkTick, sprite };
 }
 
+// Returns `current` unchanged if `next` is identical field-for-field, otherwise `next` — avoids re-rendering on a no-op tick.
+function withUnchangedBailout(current: MarioPosition, next: MarioPosition): MarioPosition {
+	const isUnchanged = (Object.keys(next) as (keyof MarioPosition)[]).every((key) => next[key] === current[key]);
+	return isUnchanged ? current : next;
+}
+
 // Advances Mario's full state by one physics tick.
 function stepPosition(current: MarioPosition, pressedKeys: PressedKeys, world: WorldConfig): MarioPosition {
 	const horizontalDirection: Direction = pressedKeys.left ? -1 : pressedKeys.right ? 1 : 0;
 	const verticalDirection: Direction = pressedKeys.up ? -1 : pressedKeys.down ? 1 : 0;
 
-	// While climbing, jump and horizontal movement are skipped entirely —
-	// climbing a ladder locks Mario onto it.
+	// While climbing, jump and horizontal movement are skipped entirely — climbing a ladder locks Mario onto it.
 	const climb = resolveClimbing(current, verticalDirection, world.girders, world.ladders);
 
 	if (climb) {
 		if (climb.top > world.worldHeight) return createInitialPosition(world.startLeft, world.startTop);
 
-		return climb.top === current.top &&
-			climb.canUseLadder === current.canUseLadder &&
-			verticalDirection === current.verticalDirection &&
-			climb.isClimbing === current.isClimbing
-			? current
-			: {
-					left: current.left,
-					top: climb.top,
-					facing: current.facing,
-					sprite: 0,
-					walkTick: 0,
-					isJumping: false,
-					jumpValue: JUMP_TICKS,
-					hammerState: current.hammerState,
-					carryingHammer: current.carryingHammer,
-					canUseLadder: climb.canUseLadder,
-					verticalDirection,
-					isClimbing: climb.isClimbing,
-				};
+		return withUnchangedBailout(current, {
+			left: current.left,
+			top: climb.top,
+			facing: current.facing,
+			sprite: 0,
+			walkTick: 0,
+			isJumping: false,
+			jumpValue: JUMP_TICKS,
+			hammerState: current.hammerState,
+			carryingHammer: current.carryingHammer,
+			canUseLadder: climb.canUseLadder,
+			verticalDirection,
+			isClimbing: climb.isClimbing,
+		});
 	}
 
 	const facing: Facing = horizontalDirection === 1 ? "right" : horizontalDirection === -1 ? "left" : current.facing;
@@ -264,31 +245,20 @@ function stepPosition(current: MarioPosition, pressedKeys: PressedKeys, world: W
 
 	if (top > world.worldHeight) return createInitialPosition(world.startLeft, world.startTop);
 
-	return left === current.left &&
-		top === current.top &&
-		facing === current.facing &&
-		sprite === current.sprite &&
-		walkTick === current.walkTick &&
-		isJumping === current.isJumping &&
-		jumpValue === current.jumpValue &&
-		canUseLadder === current.canUseLadder &&
-		verticalDirection === current.verticalDirection &&
-		current.isClimbing === false
-		? current
-		: {
-				left,
-				top,
-				facing,
-				sprite,
-				walkTick,
-				isJumping,
-				jumpValue,
-				hammerState: current.hammerState,
-				carryingHammer: current.carryingHammer,
-				canUseLadder,
-				verticalDirection,
-				isClimbing: false,
-			};
+	return withUnchangedBailout(current, {
+		left,
+		top,
+		facing,
+		sprite,
+		walkTick,
+		isJumping,
+		jumpValue,
+		hammerState: current.hammerState,
+		carryingHammer: current.carryingHammer,
+		canUseLadder,
+		verticalDirection,
+		isClimbing: false,
+	});
 }
 
 // React hook wiring up input, timers, and the physics loop into Mario's live position.

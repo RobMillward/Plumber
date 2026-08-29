@@ -38,14 +38,7 @@ export function findJumpLanding(
 	);
 }
 
-// Same idea as findJumpLanding, but direction-agnostic (a jump only ever
-// descends into a landing; climbing can cross a girder's surface moving
-// either up or down). previousBottom itself is deliberately excluded (a
-// strict `>`/`<`, not `>=`/`<=`) — climbing starts from wherever Mario
-// already is, which is very often resting exactly on a girder (the one at
-// the bottom of the ladder he's about to climb, say), and moving AWAY from
-// that girder onto the ladder must not immediately re-match the very
-// surface he's leaving.
+// Like findJumpLanding but direction-agnostic, excluding previousBottom itself so leaving a girder Mario rests on doesn't re-match it.
 export function findGirderCrossing(
 	left: number,
 	previousBottom: number,

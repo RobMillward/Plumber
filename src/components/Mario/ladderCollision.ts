@@ -1,15 +1,10 @@
 import { LADDER_WIDTH, MARIO_HEIGHT, MARIO_WIDTH } from "~/consts/dimensions";
 import type { LadderPosition } from "~/consts/levels";
 
-// A 1px tolerance on the top/bottom edges — without it, the exact resting
-// position at the top of a ladder (top + MARIO_HEIGHT === ladder.top) fails
-// the strict `>` check, so canUseLadder is false right where a player would
-// naturally be standing to start climbing back down.
+// Tolerance so the exact resting position at a ladder's edge still counts as within its bounds.
 const LADDER_VERTICAL_TOLERANCE = 2;
 
-// Same bounds test as isWithinLadderBounds, but returns the actual ladder
-// matched (rather than just whether one was) — needed by the climbing
-// logic to clamp Mario to that specific ladder's own top/bottom rung.
+// Same bounds test as isWithinLadderBounds, but returns the matched ladder itself.
 export function findLadderAt(left: number, top: number, ladders: LadderPosition[]): LadderPosition | null {
 	return (
 		ladders.find(
