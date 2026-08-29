@@ -1,0 +1,24 @@
+.info {
+	position: absolute;
+	top: calc(100% + 30px);
+	left: -38px;
+	margin-left: 8px;
+	padding: 8px 10px;
+	width: calc(100% + 40px);
+	background-color: rgba(0, 0, 0, 0.75);
+	color: #ffffff;
+	font-family: monospace;
+	font-size: 11px;
+	line-height: 1.6;
+	white-space: nowrap;
+}
+
+.info-row {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.info-row-label {
+	color: #9aa0a6;
+}

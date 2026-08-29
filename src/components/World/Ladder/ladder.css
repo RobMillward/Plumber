@@ -1,0 +1,20 @@
+.ladder {
+    position: absolute;
+    width: 15px;
+    height: var(--ladder-height, 20px);
+    border-left: 2px solid #FFFFFF;
+    border-right: 2px solid #FFFFFF;
+    background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 4px,
+        #FFFFFF 4px,
+        #FFFFFF 6px,
+        transparent 6px,
+        transparent 10px,
+        #FFFFFF 10px,
+        #FFFFFF 12px,
+        transparent 12px,
+        transparent 14px
+    );
+}

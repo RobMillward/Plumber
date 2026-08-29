@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
 import { MARIO_HEIGHT, MARIO_WIDTH } from "~/consts/dimensions";
-import type { GirderPosition } from "~/consts/levels";
+import type { GirderPosition, LadderPosition } from "~/consts/levels";
 import { FALL_STEP, findGirdersUnder, findJumpLanding, findNearestGirder, isTouchingGirder } from "./girderCollision";
+import { isWithinLadderBounds } from "./ladderCollision";
 import type {
 	Direction,
 	Facing,
@@ -25,6 +26,8 @@ const JUMP_TICKS = JUMP_STEP.length;
 const HELD_KEY_MAP: Record<string, keyof PressedKeys> = {
 	ArrowLeft: "left",
 	ArrowRight: "right",
+	ArrowUp: "up",
+	ArrowDown: "down",
 	" ": "jump",
 };
 
@@ -93,6 +96,7 @@ function createInitialPosition(left: number, top: number): MarioPosition {
 		jumpValue: 0,
 		hammerState: "none",
 		carryingHammer: false,
+		canUseLadder: false,
 	};
 }
 
@@ -121,6 +125,7 @@ function stepPosition(current: MarioPosition, pressedKeys: PressedKeys, world: W
 	const top = bottom - MARIO_HEIGHT;
 	const { walkTick, sprite } = resolveWalkAnimation(direction, current.walkTick);
 	const jumpValue = isJumping ? current.jumpValue - 1 : JUMP_TICKS;
+	const canUseLadder = isWithinLadderBounds(left, top, world.ladders);
 
 	if (top > world.worldHeight) return createInitialPosition(world.startLeft, world.startTop);
 
@@ -130,7 +135,8 @@ function stepPosition(current: MarioPosition, pressedKeys: PressedKeys, world: W
 		sprite === current.sprite &&
 		walkTick === current.walkTick &&
 		isJumping === current.isJumping &&
-		jumpValue === current.jumpValue
+		jumpValue === current.jumpValue &&
+		canUseLadder === current.canUseLadder
 		? current
 		: {
 				left,
@@ -142,6 +148,7 @@ function stepPosition(current: MarioPosition, pressedKeys: PressedKeys, world: W
 				jumpValue,
 				hammerState: current.hammerState,
 				carryingHammer: current.carryingHammer,
+				canUseLadder,
 			};
 }
 
@@ -151,10 +158,12 @@ export function useMarioPhysics(
 	girders: GirderPosition[],
 	worldWidth: number,
 	worldHeight: number,
+	ladders: LadderPosition[],
 ): MarioPosition {
 	const [position, setPosition] = useState<MarioPosition>(() => createInitialPosition(startLeft, startTop));
-	const pressedKeys = useRef<PressedKeys>({ left: false, right: false, jump: false });
+	const pressedKeys = useRef<PressedKeys>({ left: false, right: false, jump: false, up: false, down: false });
 
+	// Tracks held movement/jump keys and toggles carryingHammer on H.
 	useEffect(() => {
 		function handleKeyDown(event: KeyboardEvent) {
 			const heldKey = HELD_KEY_MAP[event.key];
@@ -186,6 +195,7 @@ export function useMarioPhysics(
 		};
 	}, []);
 
+	// Swings the hammer sprite between its up/down frames while carrying one.
 	useEffect(() => {
 		if (!position.carryingHammer) return;
 
@@ -199,8 +209,9 @@ export function useMarioPhysics(
 		return () => clearInterval(intervalId);
 	}, [position.carryingHammer]);
 
+	// Runs the fixed-timestep physics loop that advances Mario's position.
 	useEffect(() => {
-		const world: WorldConfig = { girders, worldWidth, worldHeight, startLeft, startTop };
+		const world: WorldConfig = { girders, ladders, worldWidth, worldHeight, startLeft, startTop };
 
 		let animationFrameId: number;
 		let lastTime: number | null = null;
@@ -233,7 +244,7 @@ export function useMarioPhysics(
 		animationFrameId = requestAnimationFrame(frame);
 
 		return () => cancelAnimationFrame(animationFrameId);
-	}, [girders, worldWidth, worldHeight, startLeft, startTop]);
+	}, [girders, ladders, worldWidth, worldHeight, startLeft, startTop]);
 
 	return position;
 }

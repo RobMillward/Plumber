@@ -4,8 +4,11 @@ import type { CSSProperties } from "react";
 import Girder from "./Girder/girder";
 import Mario from "../Mario/mario";
 import { LEVEL_1_GIRDER_POSITIONS } from "~/consts/levels";
+import { LEVEL_1_LADDER_POSITIONS } from "~/consts/levels";
 import { useMarioPhysics } from "../Mario/useMarioPhysics";
 import { WORLD_HEIGHT, WORLD_WIDTH } from "~/consts/dimensions";
+import Ladder from "./Ladder/ladder";
+import Info from "../Info/info";
 
 const worldStyle = {
 	"--world-width": `${WORLD_WIDTH}px`,
@@ -13,10 +16,13 @@ const worldStyle = {
 } as CSSProperties;
 
 export default function World() {
-	const mario = useMarioPhysics(0, 300, LEVEL_1_GIRDER_POSITIONS, WORLD_WIDTH, WORLD_HEIGHT);
+	const mario = useMarioPhysics(0, 300, LEVEL_1_GIRDER_POSITIONS, WORLD_WIDTH, WORLD_HEIGHT, LEVEL_1_LADDER_POSITIONS);
 
 	return (
 		<main className="world" style={worldStyle}>
+			{LEVEL_1_LADDER_POSITIONS.map(({ left, top, height }, index) => (
+				<Ladder key={`ladder_${index}`} style={{ left, top, height }} />
+			))}
 			{LEVEL_1_GIRDER_POSITIONS.map(({ left, top }, index) => (
 				<Girder key={`girder_${index}`} style={{ left, top }} />
 			))}
@@ -27,6 +33,7 @@ export default function World() {
 				style={{ left: mario.left, top: mario.top }}
 				hammerState={mario.hammerState}
 			/>
+			<Info position={mario} />
 		</main>
 	);
 }

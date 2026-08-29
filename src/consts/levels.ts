@@ -2,7 +2,11 @@ export type GirderPosition = {
 	left: number;
 	top: number;
 };
-
+export type LadderPosition = {
+	left: number;
+	top: number;
+	height: number;
+};
 // The girder sprite is a native 32x16 tile with a built-in rise across its
 // width (that's how consecutive tiles form a diagonal girder). Tiling it
 // every 32px keeps tiles edge-to-edge instead of overlapping — overlap
@@ -101,3 +105,14 @@ const ROW_BASE_TOPS = ROW_DIRECTIONS.reduce<number[]>((bases, direction, index) 
 export const LEVEL_1_GIRDER_POSITIONS: GirderPosition[] = ROW_DIRECTIONS.flatMap((direction, index) =>
 	buildGirderRow(ROW_BASE_TOPS[index], direction),
 );
+
+export const LEVEL_1_LADDER_POSITIONS: LadderPosition[] = [
+	{ left: 224, top: 317, height: 32 },
+	{ left: 110, top: 338, height: 16 },
+	{ left: 134, top: 234, height: 56 },
+	{ left: 45, top: 245, height: 34 },
+	{ left: 96, top: 208, height: 16 },
+	{ left: 96, top: 158, height: 10 },
+	{ left: 162, top: 166, height: 50 },
+	{ left: 226, top: 174, height: 34 },
+]
