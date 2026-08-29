@@ -17,7 +17,11 @@ export type MarioPosition = {
 	hammerState: HammerState;
 	carryingHammer: boolean;
 	canUseLadder: boolean;
+	verticalDirection: Direction;
+	isClimbing: boolean;
 };
+
+export type ClimbResolution = { top: number; canUseLadder: boolean; isClimbing: boolean };
 
 export type JumpResolution = { bottom: number; isJumping: boolean };
 export type HorizontalResolution = { left: number; bottom: number; isJumping: boolean };

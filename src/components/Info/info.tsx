@@ -18,6 +18,8 @@ export default function Info({ position }: InfoProps) {
 		["hammerState", position.hammerState],
 		["carryingHammer", String(position.carryingHammer)],
 		["canUseLadder", String(position.canUseLadder)],
+		["verticalDirection", String(position.verticalDirection)],
+		["isClimbing", String(position.isClimbing)],
 	];
 
 	return (
