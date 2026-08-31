@@ -115,4 +115,11 @@ export const LEVEL_1_LADDER_POSITIONS: LadderPosition[] = [
 	{ left: 96, top: 158, height: 10 },
 	{ left: 162, top: 166, height: 50 },
 	{ left: 226, top: 174, height: 34 },
+	{ left: 204, top: 140, height: 14 },
+	{ left: 204, top: 82, height: 14 },
+	{ left: 108, top: 94, height: 48 },
+	{ left: 64, top: 98, height: 40 },
+	{ left: 130, top: 26, height: 8 },
+	{ left: 130, top: 50, height: 24 },
+	{ left: 226, top: 32, height: 30 },
 ]
