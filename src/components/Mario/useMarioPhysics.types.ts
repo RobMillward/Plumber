@@ -30,6 +30,14 @@ export type JumpResolution = {
 	carryingHammer: boolean;
 	hammerCountdown: ReturnType<typeof setTimeout> | null;
 };
+
+// The hammer-carrying state and callbacks resolveJump needs, bundled since they always travel together.
+export type HammerContext = {
+	carryingHammer: boolean;
+	hammerCountdown: ReturnType<typeof setTimeout> | null;
+	onHammerExpire: () => void;
+	onHammerCollected: (hammer: HammerPosition) => void;
+};
 export type HorizontalResolution = { left: number; bottom: number; isJumping: boolean };
 
 export type WorldConfig = {

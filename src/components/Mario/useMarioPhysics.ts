@@ -16,6 +16,7 @@ import type {
 	ClimbResolution,
 	Direction,
 	Facing,
+	HammerContext,
 	HorizontalResolution,
 	JumpResolution,
 	MarioPosition,
@@ -51,12 +52,8 @@ function resolveJump(
 	isJumping: boolean,
 	jumpValue: number,
 	pressedJump: boolean,
-	girders: GirderPosition[],
-	hammers: HammerPosition[],
-	carryingHammer: boolean,
-	hammerCountdown: ReturnType<typeof setTimeout> | null,
-	onHammerExpire: () => void,
-	onHammerCollected: (hammer: HammerPosition) => void,
+	world: WorldConfig,
+	hammer: HammerContext,
 ): JumpResolution {
 	let nextBottom = bottom;
 	let nextIsJumping = isJumping;
@@ -64,28 +61,28 @@ function resolveJump(
 	if (isJumping) {
 		if (jumpValue > 0) {
 			const candidateBottom = bottom - JUMP_STEP[JUMP_TICKS - jumpValue];
-			const landingGirder = findJumpLanding(left, bottom, candidateBottom, girders);
+			const landingGirder = findJumpLanding(left, bottom, candidateBottom, world.girders);
 
 			nextBottom = landingGirder ? landingGirder.top : candidateBottom;
 			nextIsJumping = landingGirder === null;
 		} else {
 			nextIsJumping = false;
 		}
-	} else if (pressedJump && !carryingHammer && isTouchingGirder(left, bottom, girders)) {
+	} else if (pressedJump && !hammer.carryingHammer && isTouchingGirder(left, bottom, world.girders)) {
 		nextBottom = bottom - JUMP_STEP[0];
 		nextIsJumping = true;
 	}
 
 	// Checked against the tick's resolved position so a hammer touched mid-jump is still picked up.
-	const touchedHammer = carryingHammer ? null : findHammerAt(left, nextBottom, hammers);
+	const touchedHammer = hammer.carryingHammer ? null : findHammerAt(left, nextBottom, world.hammers);
 
 	if (touchedHammer) {
-		onHammerCollected(touchedHammer);
-		const timeoutId = setTimeout(onHammerExpire, HAMMER_CARRY_MS);
+		hammer.onHammerCollected(touchedHammer);
+		const timeoutId = setTimeout(hammer.onHammerExpire, HAMMER_CARRY_MS);
 		return { bottom: nextBottom, isJumping: nextIsJumping, carryingHammer: true, hammerCountdown: timeoutId };
 	}
 
-	return { bottom: nextBottom, isJumping: nextIsJumping, carryingHammer, hammerCountdown };
+	return { bottom: nextBottom, isJumping: nextIsJumping, carryingHammer: hammer.carryingHammer, hammerCountdown: hammer.hammerCountdown };
 }
 
 // Moves Mario left/right, snapping onto a girder within step tolerance.
@@ -159,48 +156,43 @@ function clampToLadderEdge(bottom: number, verticalDirection: Direction, ladder:
 }
 
 // Resolves ladder climbing for one tick, or returns null when Mario isn't climbing (blocked from starting one while carrying a hammer).
-function resolveClimbing(
-	current: MarioPosition,
-	verticalDirection: Direction,
-	girders: GirderPosition[],
-	ladders: LadderPosition[],
-): ClimbResolution | null {
+function resolveClimbing(current: MarioPosition, verticalDirection: Direction, world: WorldConfig): ClimbResolution | null {
 	const currentBottom = current.top + MARIO_HEIGHT;
 
 	const isClimbing = current.isClimbing
-		? !isTouchingGirder(current.left, currentBottom, girders)
+		? !isTouchingGirder(current.left, currentBottom, world.girders)
 		: !current.isJumping && !current.carryingHammer && current.canUseLadder && verticalDirection !== 0;
 
 	if (!isClimbing) return null;
 
 	if (verticalDirection === 0) {
 		const top = currentBottom - MARIO_HEIGHT;
-		return { top, canUseLadder: isWithinLadderBounds(current.left, top, ladders), isClimbing };
+		return { top, canUseLadder: isWithinLadderBounds(current.left, top, world.ladders), isClimbing };
 	}
 
 	const rawNextBottom = currentBottom + verticalDirection * CLIMB_STEP;
 
 	// A girder crossed this exact step always wins — land on it precisely and stop climbing right there.
-	const crossedGirder = findGirderCrossing(current.left, currentBottom, rawNextBottom, girders);
+	const crossedGirder = findGirderCrossing(current.left, currentBottom, rawNextBottom, world.girders);
 
 	if (crossedGirder) {
 		const top = crossedGirder.top - MARIO_HEIGHT;
-		return { top, canUseLadder: isWithinLadderBounds(current.left, top, ladders), isClimbing: false };
+		return { top, canUseLadder: isWithinLadderBounds(current.left, top, world.ladders), isClimbing: false };
 	}
 
 	// No girder reached yet — clamp to the ladder's own edge unless one is still reachable a bit further along.
-	const currentLadder = findLadderAt(current.left, current.top, ladders);
+	const currentLadder = findLadderAt(current.left, current.top, world.ladders);
 	let bottom = rawNextBottom;
 
 	if (currentLadder) {
 		const ladderEdge = verticalDirection === -1 ? currentLadder.top : currentLadder.top + currentLadder.height;
-		const hasCatchingGirder = hasReachableGirderNear(ladderEdge, currentBottom, verticalDirection, current.left, girders);
+		const hasCatchingGirder = hasReachableGirderNear(ladderEdge, currentBottom, verticalDirection, current.left, world.girders);
 
 		if (!hasCatchingGirder) bottom = clampToLadderEdge(bottom, verticalDirection, currentLadder);
 	}
 
 	const top = bottom - MARIO_HEIGHT;
-	const canUseLadder = isWithinLadderBounds(current.left, top, ladders);
+	const canUseLadder = isWithinLadderBounds(current.left, top, world.ladders);
 
 	return { top, canUseLadder, isClimbing };
 }
@@ -212,6 +204,11 @@ function resolveWalkAnimation(direction: Direction, previousWalkTick: number): {
 	const walkTick = previousWalkTick + 1;
 	const sprite: WalkSprite = Math.floor(walkTick / WALK_FRAME_TICKS) % 2 === 0 ? 1 : 2;
 	return { walkTick, sprite };
+}
+
+// Resets Mario to spawn once he's fallen past the bottom of the world, otherwise null.
+function respawnIfFallen(top: number, world: WorldConfig): MarioPosition | null {
+	return top > world.worldHeight ? createInitialPosition(world.startLeft, world.startTop) : null;
 }
 
 // Computed once rather than on every tick — see withUnchangedBailout.
@@ -233,41 +230,31 @@ function stepPosition(
 ): MarioPosition {
 	const horizontalDirection: Direction = pressedKeys.left ? -1 : pressedKeys.right ? 1 : 0;
 	const verticalDirection: Direction = pressedKeys.up ? -1 : pressedKeys.down ? 1 : 0;
+	const hammer: HammerContext = { carryingHammer: current.carryingHammer, hammerCountdown: current.hammerCountdown, onHammerExpire, onHammerCollected };
 
 	// While climbing, jump and horizontal movement are skipped entirely — climbing a ladder locks Mario onto it.
-	const climb = resolveClimbing(current, verticalDirection, world.girders, world.ladders);
+	const climb = resolveClimbing(current, verticalDirection, world);
 
 	if (climb) {
-		if (climb.top > world.worldHeight) return createInitialPosition(world.startLeft, world.startTop);
-
-		return withUnchangedBailout(current, {
-			...current,
-			top: climb.top,
-			sprite: 0,
-			walkTick: 0,
-			isJumping: false,
-			jumpValue: JUMP_TICKS,
-			canUseLadder: climb.canUseLadder,
-			verticalDirection,
-			isClimbing: climb.isClimbing,
-		});
+		return (
+			respawnIfFallen(climb.top, world) ??
+			withUnchangedBailout(current, {
+				...current,
+				top: climb.top,
+				sprite: 0,
+				walkTick: 0,
+				isJumping: false,
+				jumpValue: JUMP_TICKS,
+				canUseLadder: climb.canUseLadder,
+				verticalDirection,
+				isClimbing: climb.isClimbing,
+			})
+		);
 	}
 
 	const facing: Facing = horizontalDirection === 1 ? "right" : horizontalDirection === -1 ? "left" : current.facing;
 	const currentBottom = current.top + MARIO_HEIGHT;
-	const jump = resolveJump(
-		current.left,
-		currentBottom,
-		current.isJumping,
-		current.jumpValue,
-		pressedKeys.jump,
-		world.girders,
-		world.hammers,
-		current.carryingHammer,
-		current.hammerCountdown,
-		onHammerExpire,
-		onHammerCollected,
-	);
+	const jump = resolveJump(current.left, currentBottom, current.isJumping, current.jumpValue, pressedKeys.jump, world, hammer);
 
 	const horizontal = resolveHorizontalMovement(current.left, currentBottom, jump.bottom, horizontalDirection, jump.isJumping, world);
 
@@ -282,23 +269,24 @@ function stepPosition(
 	const jumpValue = isJumping ? current.jumpValue - 1 : JUMP_TICKS;
 	const canUseLadder = isWithinLadderBounds(left, top, world.ladders);
 
-	if (top > world.worldHeight) return createInitialPosition(world.startLeft, world.startTop);
-
-	return withUnchangedBailout(current, {
-		...current,
-		left,
-		top,
-		facing,
-		sprite,
-		walkTick,
-		isJumping,
-		jumpValue,
-		carryingHammer: jump.carryingHammer,
-		hammerCountdown: jump.hammerCountdown,
-		canUseLadder,
-		verticalDirection,
-		isClimbing: false,
-	});
+	return (
+		respawnIfFallen(top, world) ??
+		withUnchangedBailout(current, {
+			...current,
+			left,
+			top,
+			facing,
+			sprite,
+			walkTick,
+			isJumping,
+			jumpValue,
+			carryingHammer: jump.carryingHammer,
+			hammerCountdown: jump.hammerCountdown,
+			canUseLadder,
+			verticalDirection,
+			isClimbing: false,
+		})
+	);
 }
 
 // React hook wiring up input, timers, and the physics loop into Mario's live position.
