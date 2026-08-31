@@ -197,7 +197,7 @@ function resolveClimbing(current: MarioPosition, verticalDirection: Direction, w
 	return { top, canUseLadder, isClimbing };
 }
 
-// Derives the walk-cycle tick counter and which sprite frame it maps to.
+// Derives an animation tick counter and which sprite frame it maps to, from any direction — used for both walking and climbing.
 function resolveWalkAnimation(direction: Direction, previousWalkTick: number): { walkTick: number; sprite: WalkSprite } {
 	if (direction === 0) return { walkTick: 0, sprite: 0 };
 
@@ -236,13 +236,16 @@ function stepPosition(
 	const climb = resolveClimbing(current, verticalDirection, world);
 
 	if (climb) {
+		// Reuses the walk-cycle cadence so the climb sprite alternates at the same frequency as a walk animation.
+		const { walkTick, sprite } = resolveWalkAnimation(verticalDirection, current.walkTick);
+
 		return (
 			respawnIfFallen(climb.top, world) ??
 			withUnchangedBailout(current, {
 				...current,
 				top: climb.top,
-				sprite: 0,
-				walkTick: 0,
+				sprite,
+				walkTick,
 				isJumping: false,
 				jumpValue: JUMP_TICKS,
 				canUseLadder: climb.canUseLadder,

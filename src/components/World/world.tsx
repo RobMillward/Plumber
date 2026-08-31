@@ -53,6 +53,7 @@ export default function World() {
 				sprite={mario.sprite}
 				style={{ left: mario.left, top: mario.top }}
 				hammerState={mario.hammerState}
+				isClimbing={mario.isClimbing}
 			/>
 			<Info position={mario} />
 		</main>

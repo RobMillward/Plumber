@@ -8,6 +8,7 @@ export type MarioProps = HTMLAttributes<HTMLDivElement> & {
     facing: Facing;
     sprite: WalkSprite;
     hammerState: HammerState;
+    isClimbing: boolean;
 };
 
 const marioSizeStyle = {
@@ -15,7 +16,10 @@ const marioSizeStyle = {
     "--mario-height": `${MARIO_HEIGHT}px`,
 } as CSSProperties;
 
-export default function Mario({ className, facing, sprite, hammerState, style, ...props }: MarioProps) {
+export default function Mario({ className, facing, sprite, hammerState, isClimbing, style, ...props }: MarioProps) {
+    // Climbing mirrors on its own cadence (see sprite), independent of horizontal facing.
+    const flipped = isClimbing ? sprite !== 0 && sprite % 2 === 0 : facing === "right";
+
     const classNamesWrapper = [
         "mario-wrapper",
         facing === "right" && "mario--facing-right",
@@ -23,10 +27,18 @@ export default function Mario({ className, facing, sprite, hammerState, style, .
         .filter(Boolean)
         .join(" ");
 
+    const spriteImageClass = isClimbing
+        ? sprite === 0
+            ? "mario--sprite-climb-inactive"
+            : "mario--sprite-climb-active"
+        : hammerState === "none"
+          ? `mario--sprite-${sprite}`
+          : `mario--sprite-${sprite}-hammer-${hammerState}`;
+
     const classNamesSprite = [
         "mario-sprite",
-        facing === "right" && "mario--facing-right",
-        hammerState === "none" ? `mario--sprite-${sprite}` : `mario--sprite-${sprite}-hammer-${hammerState}`,
+        spriteImageClass,
+        flipped && "mario--flipped",
         className,
     ]
         .filter(Boolean)

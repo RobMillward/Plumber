@@ -16,13 +16,17 @@
     width: 64px;
 }
 
-.mario--facing-right {
+.mario-sprite.mario--flipped {
+    transform: scaleX(-1);
     left: 0;
     right: auto;
 }
 
-.mario--facing-right .mario-sprite {
-    transform: scaleX(-1);
+.mario--sprite-climb-inactive {
+    background-image: url('/src/assets/mario/climb_inactive.png');
+}
+.mario--sprite-climb-active {
+    background-image: url('/src/assets/mario/climb_active.png');
 }
 
 .mario--sprite-0 {
