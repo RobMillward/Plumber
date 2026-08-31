@@ -1,4 +1,4 @@
-import type { GirderPosition, LadderPosition } from "~/consts/levels";
+import type { GirderPosition, HammerPosition, LadderPosition } from "~/consts/levels";
 
 export type Direction = -1 | 0 | 1;
 export type Facing = "left" | "right";
@@ -16,6 +16,7 @@ export type MarioPosition = {
 	jumpValue: number;
 	hammerState: HammerState;
 	carryingHammer: boolean;
+	hammerCountdown: ReturnType<typeof setTimeout> | null;
 	canUseLadder: boolean;
 	verticalDirection: Direction;
 	isClimbing: boolean;
@@ -23,12 +24,18 @@ export type MarioPosition = {
 
 export type ClimbResolution = { top: number; canUseLadder: boolean; isClimbing: boolean };
 
-export type JumpResolution = { bottom: number; isJumping: boolean };
+export type JumpResolution = {
+	bottom: number;
+	isJumping: boolean;
+	carryingHammer: boolean;
+	hammerCountdown: ReturnType<typeof setTimeout> | null;
+};
 export type HorizontalResolution = { left: number; bottom: number; isJumping: boolean };
 
 export type WorldConfig = {
 	girders: GirderPosition[];
 	ladders: LadderPosition[];
+	hammers: HammerPosition[];
 	worldWidth: number;
 	worldHeight: number;
 	startLeft: number;

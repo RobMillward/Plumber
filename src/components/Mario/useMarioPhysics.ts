@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { MARIO_HEIGHT, MARIO_WIDTH } from "~/consts/dimensions";
-import type { GirderPosition, LadderPosition } from "~/consts/levels";
+import type { GirderPosition, HammerPosition, LadderPosition } from "~/consts/levels";
 import {
 	FALL_STEP,
 	findGirderCrossing,
@@ -10,6 +10,7 @@ import {
 	findNearestGirder,
 	isTouchingGirder,
 } from "./girderCollision";
+import { findHammerAt } from "./hammerCollisions";
 import { findLadderAt, isWithinLadderBounds } from "./ladderCollision";
 import type {
 	ClimbResolution,
@@ -31,6 +32,7 @@ const TICK_MS = 50;
 const STEP_TOLERANCE = 4;
 const WALK_FRAME_TICKS = 4;
 const HAMMER_SWAP_MS = 250;
+const HAMMER_CARRY_MS = 14000;
 const JUMP_STEP = [10, 7, 4, 2, 1, 0, -1, -2, -4, -7, -10];
 const JUMP_TICKS = JUMP_STEP.length;
 
@@ -42,7 +44,7 @@ const HELD_KEY_MAP: Record<string, keyof PressedKeys> = {
 	" ": "jump",
 };
 
-// Advances an in-progress jump one tick, or starts a new one.
+// Advances an in-progress jump one tick, or starts a new one (blocked while carrying a hammer); also picks up a touched hammer.
 function resolveJump(
 	left: number,
 	bottom: number,
@@ -50,22 +52,40 @@ function resolveJump(
 	jumpValue: number,
 	pressedJump: boolean,
 	girders: GirderPosition[],
+	hammers: HammerPosition[],
+	carryingHammer: boolean,
+	hammerCountdown: ReturnType<typeof setTimeout> | null,
+	onHammerExpire: () => void,
+	onHammerCollected: (hammer: HammerPosition) => void,
 ): JumpResolution {
+	let nextBottom = bottom;
+	let nextIsJumping = isJumping;
+
 	if (isJumping) {
-		if (jumpValue <= 0) return { bottom, isJumping: false };
+		if (jumpValue > 0) {
+			const candidateBottom = bottom - JUMP_STEP[JUMP_TICKS - jumpValue];
+			const landingGirder = findJumpLanding(left, bottom, candidateBottom, girders);
 
-		const nextBottom = bottom - JUMP_STEP[JUMP_TICKS - jumpValue];
-		const landingGirder = findJumpLanding(left, bottom, nextBottom, girders);
-
-		if (landingGirder) return { bottom: landingGirder.top, isJumping: false };
-		return { bottom: nextBottom, isJumping: true };
+			nextBottom = landingGirder ? landingGirder.top : candidateBottom;
+			nextIsJumping = landingGirder === null;
+		} else {
+			nextIsJumping = false;
+		}
+	} else if (pressedJump && !carryingHammer && isTouchingGirder(left, bottom, girders)) {
+		nextBottom = bottom - JUMP_STEP[0];
+		nextIsJumping = true;
 	}
 
-	if (pressedJump && isTouchingGirder(left, bottom, girders)) {
-		return { bottom: bottom - JUMP_STEP[0], isJumping: true };
+	// Checked against the tick's resolved position so a hammer touched mid-jump is still picked up.
+	const touchedHammer = carryingHammer ? null : findHammerAt(left, nextBottom, hammers);
+
+	if (touchedHammer) {
+		onHammerCollected(touchedHammer);
+		const timeoutId = setTimeout(onHammerExpire, HAMMER_CARRY_MS);
+		return { bottom: nextBottom, isJumping: nextIsJumping, carryingHammer: true, hammerCountdown: timeoutId };
 	}
 
-	return { bottom, isJumping };
+	return { bottom: nextBottom, isJumping: nextIsJumping, carryingHammer, hammerCountdown };
 }
 
 // Moves Mario left/right, snapping onto a girder within step tolerance.
@@ -110,6 +130,7 @@ function createInitialPosition(left: number, top: number): MarioPosition {
 		jumpValue: 0,
 		hammerState: "none",
 		carryingHammer: false,
+		hammerCountdown: null,
 		canUseLadder: false,
 		verticalDirection: 0,
 		isClimbing: false,
@@ -137,7 +158,7 @@ function clampToLadderEdge(bottom: number, verticalDirection: Direction, ladder:
 	return Math.min(bottom, ladder.top + ladder.height);
 }
 
-// Resolves ladder climbing for one tick, or returns null when Mario isn't climbing.
+// Resolves ladder climbing for one tick, or returns null when Mario isn't climbing (blocked from starting one while carrying a hammer).
 function resolveClimbing(
 	current: MarioPosition,
 	verticalDirection: Direction,
@@ -148,7 +169,7 @@ function resolveClimbing(
 
 	const isClimbing = current.isClimbing
 		? !isTouchingGirder(current.left, currentBottom, girders)
-		: !current.isJumping && current.canUseLadder && verticalDirection !== 0;
+		: !current.isJumping && !current.carryingHammer && current.canUseLadder && verticalDirection !== 0;
 
 	if (!isClimbing) return null;
 
@@ -200,7 +221,13 @@ function withUnchangedBailout(current: MarioPosition, next: MarioPosition): Mari
 }
 
 // Advances Mario's full state by one physics tick.
-function stepPosition(current: MarioPosition, pressedKeys: PressedKeys, world: WorldConfig): MarioPosition {
+function stepPosition(
+	current: MarioPosition,
+	pressedKeys: PressedKeys,
+	world: WorldConfig,
+	onHammerExpire: () => void,
+	onHammerCollected: (hammer: HammerPosition) => void,
+): MarioPosition {
 	const horizontalDirection: Direction = pressedKeys.left ? -1 : pressedKeys.right ? 1 : 0;
 	const verticalDirection: Direction = pressedKeys.up ? -1 : pressedKeys.down ? 1 : 0;
 
@@ -220,6 +247,7 @@ function stepPosition(current: MarioPosition, pressedKeys: PressedKeys, world: W
 			jumpValue: JUMP_TICKS,
 			hammerState: current.hammerState,
 			carryingHammer: current.carryingHammer,
+			hammerCountdown: current.hammerCountdown,
 			canUseLadder: climb.canUseLadder,
 			verticalDirection,
 			isClimbing: climb.isClimbing,
@@ -228,7 +256,19 @@ function stepPosition(current: MarioPosition, pressedKeys: PressedKeys, world: W
 
 	const facing: Facing = horizontalDirection === 1 ? "right" : horizontalDirection === -1 ? "left" : current.facing;
 	const currentBottom = current.top + MARIO_HEIGHT;
-	const jump = resolveJump(current.left, currentBottom, current.isJumping, current.jumpValue, pressedKeys.jump, world.girders);
+	const jump = resolveJump(
+		current.left,
+		currentBottom,
+		current.isJumping,
+		current.jumpValue,
+		pressedKeys.jump,
+		world.girders,
+		world.hammers,
+		current.carryingHammer,
+		current.hammerCountdown,
+		onHammerExpire,
+		onHammerCollected,
+	);
 
 	const horizontal = resolveHorizontalMovement(current.left, currentBottom, jump.bottom, horizontalDirection, jump.isJumping, world);
 
@@ -254,7 +294,8 @@ function stepPosition(current: MarioPosition, pressedKeys: PressedKeys, world: W
 		isJumping,
 		jumpValue,
 		hammerState: current.hammerState,
-		carryingHammer: current.carryingHammer,
+		carryingHammer: jump.carryingHammer,
+		hammerCountdown: jump.hammerCountdown,
 		canUseLadder,
 		verticalDirection,
 		isClimbing: false,
@@ -269,6 +310,8 @@ export function useMarioPhysics(
 	worldWidth: number,
 	worldHeight: number,
 	ladders: LadderPosition[],
+	hammers: HammerPosition[],
+	onHammerCollected: (hammer: HammerPosition) => void,
 ): MarioPosition {
 	const [position, setPosition] = useState<MarioPosition>(() => createInitialPosition(startLeft, startTop));
 	const pressedKeys = useRef<PressedKeys>({ left: false, right: false, jump: false, up: false, down: false });
@@ -321,7 +364,12 @@ export function useMarioPhysics(
 
 	// Runs the fixed-timestep physics loop that advances Mario's position.
 	useEffect(() => {
-		const world: WorldConfig = { girders, ladders, worldWidth, worldHeight, startLeft, startTop };
+		const world: WorldConfig = { girders, ladders, hammers, worldWidth, worldHeight, startLeft, startTop };
+
+		// Fires once a picked-up hammer's carry time runs out, dropping it.
+		function onHammerExpire() {
+			setPosition((current) => ({ ...current, carryingHammer: false, hammerCountdown: null, hammerState: "none" }));
+		}
 
 		let animationFrameId: number;
 		let lastTime: number | null = null;
@@ -342,7 +390,7 @@ export function useMarioPhysics(
 				setPosition((current) => {
 					let next = current;
 					for (let i = 0; i < tickCount; i++) {
-						next = stepPosition(next, pressedKeys.current, world);
+						next = stepPosition(next, pressedKeys.current, world, onHammerExpire, onHammerCollected);
 					}
 					return next;
 				});
@@ -354,7 +402,7 @@ export function useMarioPhysics(
 		animationFrameId = requestAnimationFrame(frame);
 
 		return () => cancelAnimationFrame(animationFrameId);
-	}, [girders, ladders, worldWidth, worldHeight, startLeft, startTop]);
+	}, [girders, ladders, hammers, worldWidth, worldHeight, startLeft, startTop, onHammerCollected]);
 
 	return position;
 }
