@@ -8,6 +8,8 @@ import type { HammerPosition } from "~/consts/levels";
 import { LEVEL_1_LADDER_POSITIONS } from "~/consts/levels";
 import { useMarioPhysics } from "../Mario/useMarioPhysics";
 import { WORLD_HEIGHT, WORLD_WIDTH } from "~/consts/dimensions";
+import { SPRITE_IMAGE_URLS } from "~/consts/imageAssets";
+import { usePreloadImages } from "~/utils/usePreloadImages";
 import Ladder from "./Ladder/ladder";
 import Info from "../Info/info";
 import Hammer from "./Hammer/hammer";
@@ -18,6 +20,8 @@ const worldStyle = {
 } as CSSProperties;
 
 export default function World() {
+	usePreloadImages(SPRITE_IMAGE_URLS);
+
 	const [hammers, setHammers] = useState<HammerPosition[]>(LEVEL_1_HAMMER_POSITIONS);
 
 	// Marks the touched hammer as collected so it stops rendering; stable identity keeps the physics loop from restarting every tick.
