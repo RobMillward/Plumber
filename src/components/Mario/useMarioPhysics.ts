@@ -214,9 +214,12 @@ function resolveWalkAnimation(direction: Direction, previousWalkTick: number): {
 	return { walkTick, sprite };
 }
 
+// Computed once rather than on every tick — see withUnchangedBailout.
+const POSITION_KEYS = Object.keys(createInitialPosition(0, 0)) as (keyof MarioPosition)[];
+
 // Returns `current` unchanged if `next` is identical field-for-field, otherwise `next` — avoids re-rendering on a no-op tick.
 function withUnchangedBailout(current: MarioPosition, next: MarioPosition): MarioPosition {
-	const isUnchanged = (Object.keys(next) as (keyof MarioPosition)[]).every((key) => next[key] === current[key]);
+	const isUnchanged = POSITION_KEYS.every((key) => next[key] === current[key]);
 	return isUnchanged ? current : next;
 }
 
@@ -238,16 +241,12 @@ function stepPosition(
 		if (climb.top > world.worldHeight) return createInitialPosition(world.startLeft, world.startTop);
 
 		return withUnchangedBailout(current, {
-			left: current.left,
+			...current,
 			top: climb.top,
-			facing: current.facing,
 			sprite: 0,
 			walkTick: 0,
 			isJumping: false,
 			jumpValue: JUMP_TICKS,
-			hammerState: current.hammerState,
-			carryingHammer: current.carryingHammer,
-			hammerCountdown: current.hammerCountdown,
 			canUseLadder: climb.canUseLadder,
 			verticalDirection,
 			isClimbing: climb.isClimbing,
@@ -286,6 +285,7 @@ function stepPosition(
 	if (top > world.worldHeight) return createInitialPosition(world.startLeft, world.startTop);
 
 	return withUnchangedBailout(current, {
+		...current,
 		left,
 		top,
 		facing,
@@ -293,7 +293,6 @@ function stepPosition(
 		walkTick,
 		isJumping,
 		jumpValue,
-		hammerState: current.hammerState,
 		carryingHammer: jump.carryingHammer,
 		hammerCountdown: jump.hammerCountdown,
 		canUseLadder,

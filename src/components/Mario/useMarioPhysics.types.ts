@@ -3,7 +3,7 @@ import type { GirderPosition, HammerPosition, LadderPosition } from "~/consts/le
 export type Direction = -1 | 0 | 1;
 export type Facing = "left" | "right";
 export type WalkSprite = 0 | 1 | 2;
-export type PressedKeys = { left: boolean; right: boolean; jump: boolean, up: boolean; down: boolean };
+export type PressedKeys = { left: boolean; right: boolean; jump: boolean; up: boolean; down: boolean };
 export type HammerState = "up" | "down" | "none";
 
 export type MarioPosition = {
