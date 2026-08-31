@@ -11,7 +11,7 @@ Mario climbs a zigzag of sloped girders toward the top of the level. The current
 
 All movement/collision/state logic lives in [`useMarioPhysics`](src/components/Mario/useMarioPhysics.ts), a fixed-timestep physics hook, with collision detection split out per obstacle type (`girderCollision.ts`, `ladderCollision.ts`, `hammerCollisions.ts`). Level layout (girder rows, ladders, hammer placements) is defined in [`src/consts/levels.ts`](src/consts/levels.ts).
 
-ClaudeCode used to implement ladder climbing logic, pre-loading of assets, as well as being used for refactoring and clean-up tasks
+ClaudeCode used to implement ladder climbing logic, pre-loading of assets, as well as being used for refactoring, test writing and clean-up tasks
 
 ### Controls
 
