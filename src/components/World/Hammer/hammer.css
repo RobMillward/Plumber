@@ -1,0 +1,8 @@
+.hammer {
+    position: absolute;
+    width: var(--hammer-width, 18px);
+    height: var(--hammer-height, 20px);
+    background-image: url('/src/assets/hammer.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+}

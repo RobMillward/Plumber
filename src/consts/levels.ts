@@ -7,10 +7,11 @@ export type LadderPosition = {
 	top: number;
 	height: number;
 };
-// The girder sprite is a native 32x16 tile with a built-in rise across its
-// width (that's how consecutive tiles form a diagonal girder). Tiling it
-// every 32px keeps tiles edge-to-edge instead of overlapping — overlap
-// would double up that built-in rise and fake a slope on flat rows too.
+export type HammerPosition = {
+	left: number;
+	top: number;
+	collected: boolean;
+};
 const TILE_STEP = 32;
 const COLUMNS = 9; // 0, 32, 64, ... 256
 const SLOPE_STEP = 4;
@@ -122,4 +123,9 @@ export const LEVEL_1_LADDER_POSITIONS: LadderPosition[] = [
 	{ left: 130, top: 26, height: 8 },
 	{ left: 130, top: 50, height: 24 },
 	{ left: 226, top: 32, height: 30 },
+]
+
+export const LEVEL_1_HAMMER_POSITIONS: HammerPosition[] = [	
+	{ left: 206, top: 240, collected: false },
+	{ left: 40, top: 40, collected: false },
 ]

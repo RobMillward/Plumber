@@ -3,12 +3,13 @@ import "./world.css";
 import type { CSSProperties } from "react";
 import Girder from "./Girder/girder";
 import Mario from "../Mario/mario";
-import { LEVEL_1_GIRDER_POSITIONS } from "~/consts/levels";
+import { LEVEL_1_GIRDER_POSITIONS, LEVEL_1_HAMMER_POSITIONS } from "~/consts/levels";
 import { LEVEL_1_LADDER_POSITIONS } from "~/consts/levels";
 import { useMarioPhysics } from "../Mario/useMarioPhysics";
 import { WORLD_HEIGHT, WORLD_WIDTH } from "~/consts/dimensions";
 import Ladder from "./Ladder/ladder";
 import Info from "../Info/info";
+import Hammer from "./Hammer/hammer";
 
 const worldStyle = {
 	"--world-width": `${WORLD_WIDTH}px`,
@@ -25,6 +26,9 @@ export default function World() {
 			))}
 			{LEVEL_1_GIRDER_POSITIONS.map(({ left, top }, index) => (
 				<Girder key={`girder_${index}`} style={{ left, top }} />
+			))}
+			{LEVEL_1_HAMMER_POSITIONS.map(({ left, top, collected }, index) => (
+				<Hammer key={`hammer_${index}`} style={{ left, top }} collected={collected} />
 			))}
 			<Mario
 				key="mario"
